@@ -1,0 +1,9 @@
+connectors:
+    NakadiTest:
+        type: nakadi
+        interval: 10
+        topic: end2end_monitor.test_invoked
+        verify: False
+        trash-size: 512
+        host: https://nakadi-sandbox.aruha-test.zalan.do
+
