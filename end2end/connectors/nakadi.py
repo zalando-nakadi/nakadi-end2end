@@ -7,12 +7,12 @@ import time
 import uuid
 import string
 from contextlib import closing
-
+from datetime import datetime
 from end2end import Connector
 
 
 def update_cursors(cursors_list, cursor):
-    [c.update(cursor) for c in cursors_list if c.partition == cursor.partition]
+    [c.update(cursor) for c in cursors_list if c['partition'] == cursor['partition']]
 
 
 class R(object):
@@ -22,7 +22,7 @@ class R(object):
 
     def _update(self, kwargs):
         headers = kwargs.get('headers', {})
-        headers['Authorization'] = 'Bearer: 05963b06-9802-4cde-ba8d-294f514b70a5'
+        headers['Authorization'] = 'Bearer fbae5d99-abc8-40e4-b1ca-c592e6c125c2'
         kwargs.update({
             'verify': self.verify,
             'headers': headers
@@ -50,7 +50,9 @@ class NakadiConnector(Connector):
         self.callbacks = {}
         self._ensure_event_type_exists()
         self.cursors = self._prepare_cursors()
-        threading.Thread(self._stream_events)
+        t = threading.Thread(target=self._stream_events)
+        t.setDaemon(True)
+        t.start()
 
     def _stream_events(self):
         streaming_cursors = self._prepare_cursors()
@@ -67,12 +69,12 @@ class NakadiConnector(Connector):
                 stream=True)
             with closing(response) as r:
                 if r.status_code == 200:
-                    for line in r.iter_lines():
+                    for line in r.iter_lines(chunk_size=1):
                         batch = json.loads(line)
-                        update_cursors(streaming_cursors, batch.cursor)
-                        for e in [e for e in batch.events if e.instance_id == self.instance_id]:
+                        update_cursors(streaming_cursors, batch['cursor'])
+                        for e in [e for e in batch['events'] if e['instance_id'] == self.instance_id]:
                             try:
-                                self.callbacks.pop(e.value)()
+                                self.callbacks.pop(e['value'])()
                             except KeyError:
                                 logging.warn('Callback for instance {} and value {} is not found'.format(
                                     self.instance_id, e.value))
@@ -86,8 +88,8 @@ class NakadiConnector(Connector):
         )
         if response.status_code == 200:
             return [{
-                        'partition': p.partition,
-                        'offset': p.newest_available_offset
+                        'partition': p['partition'],
+                        'offset': p['newest_available_offset']
                     } for p in response.json()]
         else:
             logging.error('Failed to read partitions info for {}. Status code: {}, content: {}'.format(
@@ -111,7 +113,15 @@ class NakadiConnector(Connector):
         response = self.r.post(
             '/event-types/{}/events'.format(self.topic),
             headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-            data=json.dumps([{'value': value, 'instance_id': self.instance_id, 'trash': self.trash}]))
+            data=json.dumps([{
+                'metadata':{
+                    'eid': str(uuid.uuid4()),
+                    'event_type': self.topic,
+                    'occurred_at': datetime.now().isoformat()
+                },
+                'value': value,
+                'instance_id': self.instance_id,
+                'trash': self.trash}]))
         if response.status_code == 200:
             logging.info('successfully published event')
             self.receive(value)
@@ -137,10 +147,8 @@ class NakadiConnector(Connector):
             )
             if response.status_code == 200:
                 batch = response.json()
-                update_cursors(self.cursors, batch.cursor)
-
-                self.cursors = batch.cursor
-                candidates = [e for e in batch.events if e.instance_id == self.instance_id and e.value == value]
+                update_cursors(self.cursors, batch['cursor'])
+                candidates = [e for e in batch['events'] if e['instance_id'] == self.instance_id and e['value'] == value]
                 if candidates:
                     return logging.info('Found previously generated event with value {} for instance id {}'.format(
                         value, self.instance_id))
@@ -162,10 +170,10 @@ class NakadiConnector(Connector):
                 'name': self.topic,
                 'owning_application': 'end2end_monitor',
                 'category': 'business',
+                'enrichment_strategies': ['metadata_enrichment'],
                 'schema': {
                     'type': 'json_schema',
-                    'title': 'Schema for end2end monitoring',
-                    'schema': {
+                    'schema': json.dumps({
                         'properties': {
                             'value': {
                                 'type': 'number',
@@ -180,11 +188,14 @@ class NakadiConnector(Connector):
                                 'description': 'Trash to test message load'
                             },
                         },
-                        'required': ['value', 'instance_id', 'trash']
-                    }
-                }}))
-        if response.status_code == 200:
+                        'required': ['value', 'instance_id', 'trash'],
+                        'title': 'Schema for end2end monitoring',
+                    })
+                }
+            }))
+        if response.status_code == 201:
             return logging.info('Created event type {}'.format(self.topic))
         else:
-            return logging.error('Failed to create event type {}, code: {}, message: {}'.format(
+            logging.error('Failed to create event type {}, code: {}, message: {}'.format(
                 self.topic, response.status_code, response.json()))
+            raise Exception('Failed to create schema for event type {}'.format(self.topic))

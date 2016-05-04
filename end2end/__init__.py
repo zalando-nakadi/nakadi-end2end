@@ -3,18 +3,15 @@ import time
 
 from blist import sortedset
 
-
-class Metric(object):
-    def on_new_time(self, secs):
-        logging.info('NEW TIME!!!: {}'.format(secs))
+from end2end.metric import create_metric, dump_metrics
 
 
 class Connector(object):
     def __init__(self, name, interval):
         self.interval = interval
         self.name = name
-        self.sync_metric = Metric()
-        self.async_metric = Metric()
+        self.sync_metric = create_metric('connector.{}.sync'.format(name), 60./interval)
+        self.async_metric = create_metric('connector.{}.async'.format(name), 60./interval)
 
     def send_and_receive(self, value, callback):
         raise NotImplementedError('Not implemented, you must implement it')
@@ -60,7 +57,7 @@ class Scheduler(object):
         while True:
             fcn, nextcall, interval = self.invocations.pop()
             curtime = int(time.time())
-            logging.info('Found curtime: {}, next: {}, interval: {}'.format(curtime, nextcall, interval))
+            logging.info(dump_metrics())
             if nextcall <= curtime:
                 fcn()
                 self.invocations.add((fcn, nextcall + interval, interval))
