@@ -13,36 +13,27 @@ folowing structure:
 
 ```
 {
-    "metric_1": {
-        "pre_configured": {
-            "m1": 0.4,
-            "m5": 0.6,
-            "m15": 1.0
-        },
-        "full_init": {
-            "m1": 0.4,
-            "m5": 0.6,
-            "m15": 1.0
-        }
-    },
-    "metric_N": {
-        "pre_configured": {
-            "m1": 0.4,
-            "m5": 0.6,
-            "m15": 1.0
-        },
-        "full_init": {
-            "m1": 0.4,
-            "m5": 0.6,
-            "m15": 1.0
+    "connectors": {
+        "ConnectorName": {
+            "sync": {
+                "m1": 0.4,
+                "m5": 0.6,
+                "m15": 1.0
+            },
+            "async": {
+                "m1": 0.4,
+                "m5": 0.6,
+                "m15": 1.0
+            }
         }
     }
 }
 ```
 Where:
- - `pre_configured` - time of end2end processing using preconfigured measurer
- - `full_init` - time of end2end processing using full initilization of consumer
- - `m1` - 1 minute average of processing
- - `m5` - 5 minute average of processing
- - `m15` - 15 minute average of processing
+ - `ConnectorName` - name of configured connector
+ - `async` - time of end2end processing using preconfigured measurer
+ - `sync` - time of end2end processing using full initilization of consumer
+ - `m1` - 1 minute average of processing time
+ - `m5` - 5 minute average of processing time
+ - `m15` - 15 minute average of processing time
 
