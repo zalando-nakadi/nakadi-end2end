@@ -23,14 +23,17 @@ TOKENS_INITIALIZED = False
 
 def get_token():
     global TOKENS_INITIALIZED
-    if not TOKENS_INITIALIZED:
-        tokens.configure()
-        tokens.manage(
-            APPLICATION_NAME,
-            ['nakadi.event_stream.read', 'nakadi.event_stream.write', 'nakadi.event_type.write', 'uid'])
-        tokens.start()
-        TOKENS_INITIALIZED = True
-    return tokens.get(APPLICATION_NAME)
+    try:
+        if not TOKENS_INITIALIZED:
+            tokens.configure()
+            tokens.manage(
+                APPLICATION_NAME,
+                ['nakadi.event_stream.read', 'nakadi.event_stream.write', 'nakadi.event_type.write', 'uid'])
+            tokens.start()
+            TOKENS_INITIALIZED = True
+        return tokens.get(APPLICATION_NAME)
+    except Exception as e:
+        return ''
 
 
 def update_cursors(cursors_list, cursor):
