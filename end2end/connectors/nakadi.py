@@ -8,12 +8,29 @@ import uuid
 import string
 from contextlib import closing
 from datetime import datetime
+import tokens
 
 from end2end import Connector
+
+APPLICATION_NAME = 'end2end_nakadi'
 
 READ_TIMEOUT = 20
 
 CONNECT_TIMEOUT = 1
+
+TOKENS_INITIALIZED = False
+
+
+def get_token():
+    global TOKENS_INITIALIZED
+    if not TOKENS_INITIALIZED:
+        tokens.configure()
+        tokens.manage(
+            APPLICATION_NAME,
+            ['nakadi.event_stream.read', 'nakadi.event_stream.write', 'nakadi.event_type.write', 'uid'])
+        tokens.start()
+        TOKENS_INITIALIZED = True
+    return tokens.get(APPLICATION_NAME)
 
 
 def update_cursors(cursors_list, cursor):
@@ -27,7 +44,7 @@ class R(object):
 
     def _update(self, kwargs):
         headers = kwargs.get('headers', {})
-        headers['Authorization'] = 'Bearer 31c956d1-d73d-4e47-ab0d-f975dedea11d'
+        headers['Authorization'] = 'Bearer {}'.format(get_token())
         headers['timeout'] = (CONNECT_TIMEOUT, READ_TIMEOUT)
         kwargs.update({
             'verify': self.verify,
