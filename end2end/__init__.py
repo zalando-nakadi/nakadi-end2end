@@ -1,7 +1,7 @@
 import logging
 import time
 
-from blist import sortedset
+from collections import deque
 
 from end2end.metric import create_metric, dump_metrics
 
@@ -47,20 +47,33 @@ def create_invocation(value_counter, connector):
 
 
 class Scheduler(object):
+
     def __init__(self, invocations):
-        self.invocations = sortedset(key=lambda x: x[1])
+        self.invocations = deque()
         nextcall = int(time.time())
-        for invoce_fcn, interval in invocations:
-            self.invocations.add((invoce_fcn, nextcall, interval))
+        for invoke_fcn, interval in invocations:
+            self.invocations.append((invoke_fcn, nextcall, interval))
+
+    def _insert_invocation(self, fcn, next_call, interval):
+        # It takes a lot of time to find correct implementation of tree in python.
+        # So just use deque, think several iterations over array is not a problem
+        idx = 0
+        for _fcn, _next_call, _interval in self.invocations:
+            if next_call <= _next_call:
+                self.invocations.rotate(-idx)
+                self.invocations.appendleft((fcn, next_call, interval))
+                self.invocations.rotate(idx)
+                return
+            idx += 1
+        self.invocations.append((fcn, next_call, interval))
 
     def run(self):
         while True:
-            fcn, nextcall, interval = self.invocations.pop()
-            curtime = int(time.time())
-            logging.info(dump_metrics())
-            if nextcall <= curtime:
+            fcn, next_call, interval = self.invocations.popleft()
+            cur_time = int(time.time())
+            if next_call <= cur_time:
                 fcn()
-                self.invocations.add((fcn, nextcall + interval, interval))
+                self._insert_invocation(fcn, next_call+interval, interval)
             else:
-                self.invocations.add((fcn, nextcall, interval))
-                time.sleep(nextcall - curtime)
+                self._insert_invocation(fcn, next_call, interval)
+                time.sleep(next_call - cur_time)

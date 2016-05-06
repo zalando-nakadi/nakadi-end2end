@@ -8,7 +8,12 @@ import uuid
 import string
 from contextlib import closing
 from datetime import datetime
+
 from end2end import Connector
+
+READ_TIMEOUT = 20
+
+CONNECT_TIMEOUT = 1
 
 
 def update_cursors(cursors_list, cursor):
@@ -22,7 +27,8 @@ class R(object):
 
     def _update(self, kwargs):
         headers = kwargs.get('headers', {})
-        headers['Authorization'] = 'Bearer fbae5d99-abc8-40e4-b1ca-c592e6c125c2'
+        headers['Authorization'] = 'Bearer 31c956d1-d73d-4e47-ab0d-f975dedea11d'
+        headers['timeout'] = (CONNECT_TIMEOUT, READ_TIMEOUT)
         kwargs.update({
             'verify': self.verify,
             'headers': headers
@@ -58,28 +64,31 @@ class NakadiConnector(Connector):
         streaming_cursors = self._prepare_cursors()
 
         while True:
-            response = self.r.get(
-                '/event-types/{}/events'.format(self.topic),
-                params={'batch_limit': 1},
-                headers={
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-nakadi-cursors': json.dumps(streaming_cursors)
-                },
-                stream=True)
-            with closing(response) as r:
-                if r.status_code == 200:
-                    for line in r.iter_lines(chunk_size=1):
-                        batch = json.loads(line)
-                        update_cursors(streaming_cursors, batch['cursor'])
-                        for e in [e for e in batch['events'] if e['instance_id'] == self.instance_id]:
-                            try:
-                                self.callbacks.pop(e['value'])()
-                            except KeyError:
-                                logging.warn('Callback for instance {} and value {} is not found'.format(
-                                    self.instance_id, e.value))
-                else:
-                    logging.error('Streaming for {} returned code {}'.format(self.topic, r.status_code))
+            try:
+                response = self.r.get(
+                    '/event-types/{}/events'.format(self.topic),
+                    params={'batch_limit': 1},
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-nakadi-cursors': json.dumps(streaming_cursors)
+                    },
+                    stream=True)
+                with closing(response) as r:
+                    if r.status_code == 200:
+                        for line in r.iter_lines(chunk_size=1):
+                            batch = json.loads(line)
+                            update_cursors(streaming_cursors, batch['cursor'])
+                            for e in [e for e in batch.get('events', []) if e['instance_id'] == self.instance_id]:
+                                try:
+                                    self.callbacks.pop(e['value'])()
+                                except KeyError:
+                                    logging.warn('Callback for instance {} and value {} is not found'.format(
+                                        self.instance_id, e.value))
+                    else:
+                        logging.error('Streaming for {} returned code {}'.format(self.topic, r.status_code))
+            except Exception as e:
+                logging.error('Failed to process connection', exc_info=e)
 
     def _prepare_cursors(self):
         response = self.r.get(
@@ -93,9 +102,9 @@ class NakadiConnector(Connector):
                     } for p in response.json()]
         else:
             logging.error('Failed to read partitions info for {}. Status code: {}, content: {}'.format(
-                self.topic, response.status_code, response.json()))
+                self.topic, response.status_code, response.text))
             raise Exception('Failed to read partitions info for {}. Status code: {}, content: {}'.format(
-                self.topic, response.status_code, response.json()))
+                self.topic, response.status_code, response.text))
 
     def _ensure_event_type_exists(self):
         logging.debug('Checking if event type {} exists'.format(self.topic))
@@ -106,29 +115,32 @@ class NakadiConnector(Connector):
             return self._create_event_type()
         else:
             raise Exception('Failed to check status of event type {}. Error is {}, {}'.format(
-                self.topic, response.status_code, response.json()))
+                self.topic, response.status_code, response.text))
 
     def send_and_receive(self, value, callback):
-        self.callbacks[value] = callback
-        response = self.r.post(
-            '/event-types/{}/events'.format(self.topic),
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-            data=json.dumps([{
-                'metadata':{
-                    'eid': str(uuid.uuid4()),
-                    'event_type': self.topic,
-                    'occurred_at': datetime.now().isoformat()
-                },
-                'value': value,
-                'instance_id': self.instance_id,
-                'trash': self.trash}]))
-        if response.status_code == 200:
-            logging.info('successfully published event')
-            self.receive(value)
-        else:
-            logging.error('Failed to publish event to {}, status code: {}, content: {}'.format(
-                self.topic, response.status_code, response.json()))
-            del self.callbacks[value]
+        try:
+            self.callbacks[value] = callback
+            response = self.r.post(
+                '/event-types/{}/events'.format(self.topic),
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                data=json.dumps([{
+                    'metadata': {
+                        'eid': str(uuid.uuid4()),
+                        'event_type': self.topic,
+                        'occurred_at': datetime.now().isoformat()
+                    },
+                    'value': value,
+                    'instance_id': self.instance_id,
+                    'trash': self.trash}]))
+            if response.status_code == 200:
+                logging.info('successfully published event')
+                self.receive(value)
+            else:
+                logging.error('Failed to publish event to {}, status code: {}, content: {}'.format(
+                    self.topic, response.status_code, response.text))
+                del self.callbacks[value]
+        except Exception as e:
+            logging.error('Failed to send and receive value {}'.format(value), exc_info=e)
 
     def receive(self, value):
         attempts_left = 100
@@ -148,7 +160,8 @@ class NakadiConnector(Connector):
             if response.status_code == 200:
                 batch = response.json()
                 update_cursors(self.cursors, batch['cursor'])
-                candidates = [e for e in batch['events'] if e['instance_id'] == self.instance_id and e['value'] == value]
+                candidates = [e for e in batch['events'] if
+                              e['instance_id'] == self.instance_id and e['value'] == value]
                 if candidates:
                     return logging.info('Found previously generated event with value {} for instance id {}'.format(
                         value, self.instance_id))
@@ -157,7 +170,7 @@ class NakadiConnector(Connector):
                         batch, value, self.instance_id))
             else:
                 logging.error('Failed to get events of type {}, status code: {}, message: {}'.format(
-                    self.topic, response.status_code, response.json()))
+                    self.topic, response.status_code, response.text))
                 attempts_left -= 1
                 time.sleep(1)
 
@@ -197,5 +210,5 @@ class NakadiConnector(Connector):
             return logging.info('Created event type {}'.format(self.topic))
         else:
             logging.error('Failed to create event type {}, code: {}, message: {}'.format(
-                self.topic, response.status_code, response.json()))
+                self.topic, response.status_code, response.text))
             raise Exception('Failed to create schema for event type {}'.format(self.topic))
