@@ -14,4 +14,4 @@ def __load_connector(name, spec):
 
 
 def load_connectors(json):
-    return [__load_connector(x, y) for x, y in json.iteritems()]
+    return [__load_connector(x, y) for x, y in json.items()]

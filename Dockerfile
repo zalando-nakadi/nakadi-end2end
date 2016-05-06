@@ -1,10 +1,8 @@
-FROM ubuntu:14.04
+FROM registry.opensource.zalan.do/stups/python:3.5.1-18
 
 MAINTAINER Team Aruha, team-aruha@zalando.de
 
-RUN apt-get update && apt-get upgrade
-RUN apt-get install -y python-yaml python-pip
-RUN pip install --upgrade stups-tokens click
+RUN pip3 install --upgrade stups-tokens click pyyaml
 
 WORKDIR /
 ADD end2end /end2end

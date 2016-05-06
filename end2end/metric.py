@@ -20,18 +20,18 @@ class Metric(object):
         self.emas = {str(i): EMA(rpm, i) for i in (1, 5, 15)}
 
     def on_new_time(self, secs):
-        [ema.add(secs) for ema in self.emas.itervalues()]
+        [ema.add(secs) for ema in self.emas.values()]
         self.last = secs
         self.count += 1
 
     def dump(self):
-        r = {'m{}'.format(k): v.value for k, v in self.emas.iteritems()}
+        r = {'m{}'.format(k): v.value for k, v in self.emas.items()}
         r['count'] = self.count
         r['last'] = self.last
         return r
 
     def __str__(self):
-        return ','.join('{}:{}'.format(k, v.value) for k, v in self.dump().iteritems())
+        return ','.join('{}:{}'.format(k, v.value) for k, v in self.dump().items())
 
 
 __METRICS = {}
@@ -45,7 +45,7 @@ def create_metric(name, rpm):
 
 def dump_metrics():
     result = {}
-    for k, v in __METRICS.iteritems():
+    for k, v in __METRICS.items():
         x = result
         for i in k.split('.'):
             if i not in x:

@@ -33,7 +33,7 @@ def get_token():
             TOKENS_INITIALIZED = True
         return tokens.get(APPLICATION_NAME)
     except Exception as e:
-        return ''
+        return '70611ce3-3c07-46f1-84fc-4a1d0fb44874'
 
 
 def update_cursors(cursors_list, cursor):
@@ -48,10 +48,10 @@ class R(object):
     def _update(self, kwargs):
         headers = kwargs.get('headers', {})
         headers['Authorization'] = 'Bearer {}'.format(get_token())
-        headers['timeout'] = (CONNECT_TIMEOUT, READ_TIMEOUT)
         kwargs.update({
             'verify': self.verify,
-            'headers': headers
+            'headers': headers,
+            'timeout': (CONNECT_TIMEOUT, READ_TIMEOUT)
         })
         return kwargs
 
@@ -63,7 +63,7 @@ class R(object):
 
 
 def _generate_trash(trash_size):
-    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in xrange(trash_size))
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(trash_size))
 
 
 class NakadiConnector(Connector):
@@ -97,7 +97,7 @@ class NakadiConnector(Connector):
                 with closing(response) as r:
                     if r.status_code == 200:
                         for line in r.iter_lines(chunk_size=1):
-                            batch = json.loads(line)
+                            batch = json.loads(line.decode('UTF-8'))
                             update_cursors(streaming_cursors, batch['cursor'])
                             for e in [e for e in batch.get('events', []) if e['instance_id'] == self.instance_id]:
                                 try:
