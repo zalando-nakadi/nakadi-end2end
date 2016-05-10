@@ -33,7 +33,7 @@ def get_token():
             TOKENS_INITIALIZED = True
         return tokens.get(APPLICATION_NAME)
     except Exception as e:
-        return '70611ce3-3c07-46f1-84fc-4a1d0fb44874'
+        return ''
 
 
 def update_cursors(cursors_list, cursor):
