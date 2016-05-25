@@ -13,7 +13,7 @@ from tornado.ioloop import IOLoop
 
 from end2end import metric
 from end2end.connectors import Connector
-from end2end.tokens import get_token
+from end2end.security import get_token
 
 STREAM_SEPARATOR = '\n'.encode('UTF-8')
 

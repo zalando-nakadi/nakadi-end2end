@@ -6,7 +6,7 @@ from tornado.ioloop import IOLoop
 from end2end.connectors import registry
 from end2end.connectors.factory import load_connectors
 from end2end.server import start_http_server
-from end2end import tokens
+from end2end import security
 
 
 def start(fname, port, token):
@@ -19,9 +19,9 @@ def start(fname, port, token):
     if not connectors:
         raise Exception('No connectors information found in {}'.format(fname))
     if token:
-        tokens.use_static_token(token)
+        security.use_static_token(token)
     else:
-        tokens.use_berry_token('end2end_nakadi')
+        security.use_berry_token('end2end_nakadi')
     start_http_server(port)
     registry.instance().set_items(connectors)
     IOLoop.instance().start()
