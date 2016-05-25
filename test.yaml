@@ -2,6 +2,7 @@ connectors:
     nakadi_e2e_512:
         type: nakadi
         interval: 4
+        receivers: 1
         topic: end2end_monitor.test_invoked_512
         verify: True
         trash-size: 512
@@ -9,8 +10,8 @@ connectors:
     nakadi_e2e_1024:
         type: nakadi
         interval: 4
+        receivers: 1
         topic: end2end_monitor.test_invoked_1024
         verify: True
         trash-size: 1024
         host: https://nakadi-live.aruha.zalan.do
-
