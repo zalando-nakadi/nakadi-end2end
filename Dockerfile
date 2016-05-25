@@ -2,6 +2,10 @@ FROM registry.opensource.zalan.do/stups/python:3.5.1-18
 
 MAINTAINER Team Aruha, team-aruha@zalando.de
 
+RUN apt-get install -y python3-pycurl
+
+RUN pip3 install --upgrade pip
+
 RUN pip3 install --upgrade stups-tokens click pyyaml tornado
 
 WORKDIR /
