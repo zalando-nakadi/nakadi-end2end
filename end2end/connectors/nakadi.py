@@ -269,14 +269,12 @@ class NakadiConnector(Connector):
             if r.code != 200:
                 logging.warning('status {} and body {} while fetching for value {}'.format(r.code, r.body, value))
                 return _fetch_again()
-            value_processed = False
             batch = json.loads(r.body.decode('UTF-8'))
             update_cursors(self.cursors, batch['cursor'])
             for e in [x for x in batch['events'] if x['instance_id'] == self.instance_id]:
                 if e['value'] in self.sync_callbacks:
-                    value_processed = value_processed or e['value'] == value
                     self.sync_callbacks.pop(e['value'])()
-            if not value_processed:
+            if value in self.sync_callbacks:
                 return _fetch_again()
 
         def _fetch_again():
