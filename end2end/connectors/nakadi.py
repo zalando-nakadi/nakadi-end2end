@@ -59,32 +59,33 @@ def stream_events(base_url, topic_name, verify, cursors_, instance_id, value_cal
     }
 
     def _stream_internal():
-        if thread_def['stopped']:
-            return
-        headers = {
-            'Accept': 'application/json',
-            'X-nakadi-cursors': json.dumps(streaming_cursors),
-            'Authorization': 'Bearer {}'.format(get_token())
-        }
-        headers.update(_generate_authorization())
-        response = requests.get(
-            '{}/event-types/{}/events?batch_limit=1'.format(base_url, topic_name),
-            headers=headers,
-            verify=verify,
-            timeout=(1, 40),
-            stream=True)
-        try:
-            with closing(response) as r:
-                if r.status_code == 200:
-                    for line in r.iter_lines(chunk_size=1):
-                        batch = json.loads(line.decode('utf-8'))
-                        update_cursors(streaming_cursors, batch['cursor'])
-                        for evt in [x for x in batch.get('events', []) if x['instance_id'] == instance_id]:
-                            value_callback(evt['value'])
-                else:
-                    logging.error('Streaming for {} returned status code {}'.format(topic_name, r.status_code))
-        except Exception as e:
-            logging.error("Failed to process events", exc_info=e)
+        while not thread_def['stopped']:
+            try:
+                headers = {
+                    'Accept': 'application/json',
+                    'X-nakadi-cursors': json.dumps(streaming_cursors),
+                    'Authorization': 'Bearer {}'.format(get_token())
+                }
+                headers.update(_generate_authorization())
+                response = requests.get(
+                    '{}/event-types/{}/events?batch_limit=1'.format(base_url, topic_name),
+                    headers=headers,
+                    verify=verify,
+                    timeout=(1, 40),
+                    stream=True)
+                with closing(response) as r:
+                    if r.status_code == 200:
+                        for line in r.iter_lines(chunk_size=1):
+                            batch = json.loads(line.decode('utf-8'))
+                            update_cursors(streaming_cursors, batch['cursor'])
+                            for evt in [x for x in batch.get('events', []) if x['instance_id'] == instance_id]:
+                                value_callback(evt['value'])
+                            if thread_def['stopped']:
+                                logging.info('Breaking because thread for {} stopped'.format(topic_name))
+                    else:
+                        logging.error('Streaming for {} returned status code {}'.format(topic_name, r.status_code))
+            except Exception as e:
+                logging.error("Failed to process events", exc_info=e)
 
     t = threading.Thread(target=_stream_internal)
     t.setDaemon(True)
