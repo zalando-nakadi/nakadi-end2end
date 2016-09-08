@@ -6,4 +6,4 @@
 *.iws
 
 scm-source.json
-
+*.sh
