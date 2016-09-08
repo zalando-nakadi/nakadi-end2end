@@ -255,7 +255,7 @@ class NakadiConnector(Connector):
                 'metadata': {
                     'eid': str(uuid.uuid4()),
                     'event_type': self.topic,
-                    'occurred_at': datetime.now().isoformat()
+                    'occurred_at': datetime.now().replace(microsecond=0).isoformat()
                 },
                 'value': value,
                 'instance_id': self.instance_id,
