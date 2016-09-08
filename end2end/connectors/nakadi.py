@@ -5,7 +5,7 @@ import string
 import threading
 import uuid
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, tzinfo, timedelta
 
 import requests
 from tornado.curl_httpclient import CurlAsyncHTTPClient
@@ -20,6 +20,22 @@ STREAM_SEPARATOR = '\n'.encode('UTF-8')
 READ_TIMEOUT = 20
 
 CONNECT_TIMEOUT = 1
+
+ZERO_DELTA = timedelta(0)
+
+
+class UtcTimeZone(tzinfo):
+    def utcoffset(self, dt):
+        return ZERO_DELTA
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO_DELTA
+
+
+UTC_INSTANCE = UtcTimeZone()
 
 
 def _create_event_type_description(topic):
@@ -229,7 +245,8 @@ class NakadiConnector(Connector):
                 self.r.base_url, self.topic, self.r.verify, self.cursors, self.instance_id, self.value_callback)
 
     def send_and_receive(self, value, send_callback, sync_callback, async_callback, async_max_callback):
-        super(NakadiConnector, self).send_and_receive(value, send_callback, sync_callback, async_callback, async_max_callback)
+        super(NakadiConnector, self).send_and_receive(value, send_callback, sync_callback, async_callback,
+                                                      async_max_callback)
         self.register_async_callback(value, async_callback, async_max_callback)
         if sync_callback:
             self.sync_callbacks[value] = sync_callback
@@ -255,7 +272,7 @@ class NakadiConnector(Connector):
                 'metadata': {
                     'eid': str(uuid.uuid4()),
                     'event_type': self.topic,
-                    'occurred_at': datetime.now().replace(microsecond=0).isoformat()
+                    'occurred_at': datetime.now().replace(tzinfo=UTC_INSTANCE).isoformat()
                 },
                 'value': value,
                 'instance_id': self.instance_id,
