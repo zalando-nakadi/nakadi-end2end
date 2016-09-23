@@ -41,7 +41,7 @@ UTC_INSTANCE = UtcTimeZone()
 def _create_event_type_description(topic):
     return {
         'name': topic,
-        'owning_application': 'end2end_monitor',
+        'owning_application': 'stups_aruha-test-end2end-nakadi',
         'category': 'business',
         'enrichment_strategies': ['metadata_enrichment'],
         'schema': {
@@ -135,6 +135,7 @@ class RT(object):
         self.verify = verify
 
     def fetch(self, url, callback, **kwargs):
+        kwargs['request_timeout'] = 60
         _prepare_defaults(kwargs)
         return self.http_client.fetch('{}{}'.format(self.base_url, url), callback=callback, **kwargs)
 
