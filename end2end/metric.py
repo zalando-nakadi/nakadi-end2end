@@ -27,9 +27,9 @@ class Sample(object):
         size = len(self.sample)
         if size == self.sample_size:
             sorted_sample = sorted(self.sample);
-            self.p95 = sorted_sample[int(math.ceil((size * 95.99) / 100)) - 1]
-            self.p98 = sorted_sample[int(math.ceil((size * 98.99) / 100)) - 1]
-            self.p99 = sorted_sample[int(math.ceil((size * 99.95) / 100)) - 1]
+            self.p95 = sorted_sample[int(math.ceil((size * 95) / 100)) - 1]
+            self.p98 = sorted_sample[int(math.ceil((size * 98) / 100)) - 1]
+            self.p99 = sorted_sample[int(math.ceil((size * 99) / 100)) - 1]
             del self.sample[0]
         self.sample.append(value)
 
@@ -57,9 +57,9 @@ class Metric(Named):
         r = {'m{}'.format(k): v.value for k, v in self.emas.items()}
         r['count'] = self.count
         r['last'] = self.last
-        r['p95.99'] = self.sample.p95
-        r['p98.99'] = self.sample.p98
-        r['p99.95'] = self.sample.p99
+        r['p95'] = self.sample.p95
+        r['p98'] = self.sample.p98
+        r['p99'] = self.sample.p99
         return r
 
     def __str__(self):
