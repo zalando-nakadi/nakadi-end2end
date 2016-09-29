@@ -48,10 +48,10 @@ class Metric(Named):
         self.sample = Sample()
 
     def on_value(self, secs):
-            [ema.add(secs) for ema in self.emas.values()]
-            self.last = secs
-            self.count += 1
-            self.sample.add(secs)
+        [ema.add(secs) for ema in self.emas.values()]
+        self.last = secs
+        self.count += 1
+        self.sample.add(secs)
 
     def dump(self):
         r = {'m{}'.format(k): v.value for k, v in self.emas.items()}
