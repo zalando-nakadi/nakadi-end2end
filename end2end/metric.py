@@ -1,7 +1,7 @@
 import math
 
 import time
-
+import os
 
 class EMA(object):
     def __init__(self, rpm, mins):
@@ -15,19 +15,23 @@ class EMA(object):
             self.value = value * self.alfa + (1 - self.alfa) * self.value
 
 
-class Percentile(object):
-    def __init__(self, percentile, data_size):
-        self.percentile = percentile
-        self.data_size = data_size
-        self.data = []
-        self.percentileValue = None
+class Sample(object):
+    def __init__(self):
+        self.sample_size = os.getenv('PERCENTILE_SAMPLE_SIZE', 1000)
+        self.sample = []
+        self.p95 = None
+        self.p98 = None
+        self.p99 = None
 
-    def on_value(self, value):
-        size = len(self.data)
-        if size == self.data_size:
-            del self.data[0]
-        self.data.append(value)
-        self.percentileValue = sorted(self.data)[int(math.ceil((size * self.percentile) / 100)) - 1]
+    def add(self, value):
+        size = len(self.sample)
+        if size == self.sample_size:
+            sorted_sample = sorted(self.sample);
+            self.p95 = sorted_sample[int(math.ceil((size * 95.99) / 100)) - 1]
+            self.p98 = sorted_sample[int(math.ceil((size * 98.99) / 100)) - 1]
+            self.p99 = sorted_sample[int(math.ceil((size * 99.95) / 100)) - 1]
+            del self.sample[0]
+        self.sample.append(value)
 
 
 class Named(object):
@@ -41,25 +45,21 @@ class Metric(Named):
         self.count = 0
         self.last = 0
         self.emas = {str(i): EMA(rpm, i) for i in (1, 5, 15)}
-        self.p95 = {str(i): Percentile(95, rpm / i) for i in (1, 5, 15)}
-        self.p98 = {str(i): Percentile(98, rpm / i) for i in (1, 5, 15)}
-        self.p99 = {str(i): Percentile(99, rpm / i) for i in (1, 5, 15)}
+        self.sample = Sample()
 
     def on_value(self, secs):
             [ema.add(secs) for ema in self.emas.values()]
-            [p.on_value(secs) for p in self.p95.values()]
-            [p.on_value(secs) for p in self.p98.values()]
-            [p.on_value(secs) for p in self.p99.values()]
             self.last = secs
             self.count += 1
+            self.sample.add(secs)
 
     def dump(self):
         r = {'m{}'.format(k): v.value for k, v in self.emas.items()}
-        r.update({'p95_m{}'.format(k): v.percentileValue for k, v in self.p95.items()})
-        r.update({'p98_m{}'.format(k): v.percentileValue for k, v in self.p98.items()})
-        r.update({'p99_m{}'.format(k): v.percentileValue for k, v in self.p99.items()})
         r['count'] = self.count
         r['last'] = self.last
+        r['p95.99'] = self.sample.p95
+        r['p98.99'] = self.sample.p98
+        r['p99.95'] = self.sample.p99
         return r
 
     def __str__(self):
