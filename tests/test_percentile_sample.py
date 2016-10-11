@@ -4,7 +4,7 @@ from end2end.metric import Percentile
 
 class TestPercentile(unittest.TestCase):
     def test_percentile(self):
-        percentile = Percentile()
+        percentile = Percentile(1000)
         for x in range(1001):
             percentile.add(x)
         self.assertEqual(950, percentile.p95)

@@ -17,8 +17,8 @@ class EMA(object):
 
 
 class Percentile(object):
-    def __init__(self):
-        self.sample_size = os.getenv('PERCENTILE_SAMPLE_SIZE', 1000)
+    def __init__(self, sample_size):
+        self.sample_size = sample_size
         self.sample = []
         self.p95 = None
         self.p98 = None
@@ -46,7 +46,7 @@ class Metric(Named):
         self.count = 0
         self.last = 0
         self.emas = {str(i): EMA(rpm, i) for i in (1, 5, 15)}
-        self.percentile = Percentile()
+        self.percentile = Percentile(os.getenv('PERCENTILE_SAMPLE_SIZE', 1000))
 
     def on_value(self, secs):
         [ema.add(secs) for ema in self.emas.values()]
