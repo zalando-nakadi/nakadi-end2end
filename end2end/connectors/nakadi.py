@@ -41,7 +41,7 @@ UTC_INSTANCE = UtcTimeZone()
 def _create_event_type_description(topic):
     return {
         'name': topic,
-        'owning_application': 'stups_aruha-test-end2end-nakadi',
+        'owning_application': 'end2end_monitor',
         'category': 'business',
         'enrichment_strategies': ['metadata_enrichment'],
         'schema': {

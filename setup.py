@@ -79,6 +79,7 @@ def setup_package():
         classifiers=CLASSIFIERS,
         test_suite='tests',
         packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
+        install_requires=[req for req in read('requirements.txt').split('\\n') if req != ''],
         cmdclass={'test': PyTest},
         tests_require=['pytest-cov', 'pytest'],
         command_options=command_options,
