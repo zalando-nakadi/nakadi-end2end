@@ -47,6 +47,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: Implementation :: CPython',
 ]
 
+
 class PyTest(test):
     def run_tests(self):
         try:
