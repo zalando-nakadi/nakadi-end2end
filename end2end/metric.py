@@ -1,6 +1,7 @@
 import math
 
 import time
+import os
 
 
 class EMA(object):
@@ -15,6 +16,25 @@ class EMA(object):
             self.value = value * self.alfa + (1 - self.alfa) * self.value
 
 
+class Percentile(object):
+    def __init__(self, sample_size):
+        self.sample_size = sample_size
+        self.sample = []
+        self.p95 = None
+        self.p98 = None
+        self.p99 = None
+
+    def add(self, value):
+        self.sample.append(value)
+        size = len(self.sample)
+        if size == self.sample_size:
+            sorted_sample = sorted(self.sample);
+            self.p95 = sorted_sample[int(math.ceil((size * 95) / 100)) - 1]
+            self.p98 = sorted_sample[int(math.ceil((size * 98) / 100)) - 1]
+            self.p99 = sorted_sample[int(math.ceil((size * 99) / 100)) - 1]
+            del self.sample[0]
+
+
 class Named(object):
     def __init__(self, name):
         self.name = name
@@ -26,16 +46,21 @@ class Metric(Named):
         self.count = 0
         self.last = 0
         self.emas = {str(i): EMA(rpm, i) for i in (1, 5, 15)}
+        self.percentile = Percentile(os.getenv('PERCENTILE_SAMPLE_SIZE', 1000))
 
     def on_value(self, secs):
         [ema.add(secs) for ema in self.emas.values()]
         self.last = secs
         self.count += 1
+        self.percentile.add(secs)
 
     def dump(self):
         r = {'m{}'.format(k): v.value for k, v in self.emas.items()}
         r['count'] = self.count
         r['last'] = self.last
+        r['p95'] = self.percentile.p95
+        r['p98'] = self.percentile.p98
+        r['p99'] = self.percentile.p99
         return r
 
     def __str__(self):
