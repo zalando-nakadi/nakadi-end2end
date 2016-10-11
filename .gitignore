@@ -7,3 +7,6 @@
 
 scm-source.json
 *.sh
+.cache/
+.eggs/
+end2end.egg-info/
