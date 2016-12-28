@@ -13,6 +13,7 @@ from tornado.ioloop import IOLoop
 
 from end2end import metric
 from end2end.connectors import Connector
+from end2end.connectors.registry import DataToSend
 from end2end.security import get_token
 
 STREAM_SEPARATOR = '\n'.encode('UTF-8')
@@ -137,10 +138,12 @@ class RT(object):
     def fetch(self, url, callback, **kwargs):
         kwargs['request_timeout'] = 60
         _prepare_defaults(kwargs)
+        kwargs['validate_cert'] = self.verify
         return self.http_client.fetch('{}{}'.format(self.base_url, url), callback=callback, **kwargs)
 
     def stream(self, url, cb, complete_cb, **kwargs):
         kwargs['request_timeout'] = 60
+        kwargs['validate_cert'] = self.verify
         _prepare_defaults(kwargs)
 
         return self.http_client.fetch(
@@ -245,24 +248,23 @@ class NakadiConnector(Connector):
             self.initialized_receivers[i] = stream_events(
                 self.r.base_url, self.topic, self.r.verify, self.cursors, self.instance_id, self.value_callback)
 
-    def send_and_receive(self, value, send_callback, sync_callback, async_callback, async_max_callback):
-        super(NakadiConnector, self).send_and_receive(value, send_callback, sync_callback, async_callback,
-                                                      async_max_callback)
-        self.register_async_callback(value, async_callback, async_max_callback)
-        if sync_callback:
-            self.sync_callbacks[value] = sync_callback
+    def send_and_receive(self, data: DataToSend, use_sync: bool):
+        super(NakadiConnector, self).send_and_receive(data, use_sync)
+        self.register_async_callback(data.value, data.on_async_received, data.on_async_max_received)
+        if use_sync:
+            self.sync_callbacks[data.value] = data.on_sync_received
 
         def _on_event_pushed(r):
             self.status_counter.on_new_status(r.code)
             if r.code == 200:
                 logging.info('successfully published event')
-                send_callback()
-                if sync_callback:
-                    return self._receive(value)
+                data.on_data_sent()
+                if use_sync:
+                    return self._receive(data.value)
             else:
                 logging.error('Failed to publish event to {}, status code: {}, content: {}'.format(
                     self.topic, r.code, r.body))
-                self.delete_async_callback(value)
+                self.delete_async_callback(data.value)
 
         self.r.fetch(
             '/event-types/{}/events'.format(self.topic),
@@ -275,7 +277,7 @@ class NakadiConnector(Connector):
                     'event_type': self.topic,
                     'occurred_at': datetime.now().replace(tzinfo=UTC_INSTANCE).isoformat()
                 },
-                'value': value,
+                'value': data.value,
                 'instance_id': self.instance_id,
                 'trash': self.trash}]).encode('utf-8')
         )

@@ -10,7 +10,7 @@ from end2end import security
 
 
 def start(fname, port, token):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s\t%(levelname)s\t%(message)s')
     logging.getLogger('tornado.curl_httpclient').setLevel(logging.WARN)
     logging.info('Reading configuration from {}'.format(fname))
     with open(fname, 'r') as f:
