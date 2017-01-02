@@ -10,4 +10,5 @@ scm-source.json
 .cache/
 .eggs/
 .idea/
-end2end.egg-info/
+dist/
+nakadi_end2end.egg-info/
