@@ -23,12 +23,12 @@ def read_version(package):
                 return line.split()[-1].strip().strip("'")
 
 
-NAME = 'end2end'
+NAME = 'nakadi-end2end'
 MAIN_PACKAGE = 'end2end'
 VERSION = read_version(MAIN_PACKAGE)
-DESCRIPTION = 'Measuring time for message end-to-end processing'
+DESCRIPTION = 'Measuring time for nakadi end-to-end processing'
 LICENSE = 'Apache License 2.0'
-URL = 'https://github.com/zalando/nakadi-end2end'
+URL = 'https://github.com/zalando-incubator/nakadi-end2end'
 AUTHOR = 'Dmitry Sorokin'
 EMAIL = 'dmitriy.sorokin@zalando.de'
 KEYWORDS = 'measuring message processing time'
@@ -43,8 +43,12 @@ CLASSIFIERS = [
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: POSIX :: Linux',
     'Programming Language :: Python',
-    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: Implementation :: CPython',
+]
+
+CONSOLE_SCRIPTS = [
+    'end2end-daemon = end2end.main:start'
 ]
 
 
@@ -83,6 +87,9 @@ def setup_package():
         cmdclass={'test': PyTest},
         tests_require=['pytest-cov', 'pytest'],
         command_options=command_options,
+        entry_points={
+            'console_scripts': CONSOLE_SCRIPTS
+        }
     )
 
 if __name__ == '__main__':
