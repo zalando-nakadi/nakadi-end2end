@@ -9,8 +9,8 @@ import setuptools
 from setuptools import setup
 from setuptools.command.test import test
 
-if sys.version_info < (3, 4, 0):
-    sys.stderr.write('FATAL: end2end needs to be run with Python 3.4+\n')
+if sys.version_info < (3, 5, 0):
+    sys.stderr.write('FATAL: end2end needs to be run with Python 3.5+\n')
     sys.exit(1)
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(inspect.getfile(inspect.currentframe())))

@@ -2,16 +2,18 @@ connectors:
     nakadi_e2e_512:
         type: nakadi
         interval: 4
-        receivers: 1
+        receivers: 4
+        max_wait: 30
         topic: end2end_monitor.test_invoked_512
-        verify: True
+        verify: False
         trash-size: 512
-        host: https://nakadi-live.aruha.zalan.do
+        host: https://nakadi-staging.aruha-test.zalan.do
     nakadi_e2e_1024:
         type: nakadi
         interval: 4
-        receivers: 1
+        receivers: 4
+        max_wait: 30
         topic: end2end_monitor.test_invoked_1024
-        verify: True
+        verify: False
         trash-size: 1024
-        host: https://nakadi-live.aruha.zalan.do
+        host: https://nakadi-staging.aruha-test.zalan.do

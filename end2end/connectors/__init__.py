@@ -6,6 +6,7 @@ class Connector(object):
         self.config = kwargs
         self.name = name
         self.interval = float(kwargs.get('interval', 10))
+        self.max_wait = float(kwargs.get('max_wait', 60))
         if self.interval <= 0:
             self.interval = 1
         self.sync_metric = metric.instance().create_metric('connector.{}.sync'.format(name), 60. / self.interval)
@@ -16,7 +17,7 @@ class Connector(object):
         self.send_rpm = metric.instance().create_call_counter('connector.{}.rps'.format(name))
         self.active = True
 
-    def send_and_receive(self, value, send_callback, sync_callback, async_callback, async_max_callback):
+    def send_and_receive(self, data, use_sync):
         self.send_rpm.on_call()
 
     def deinitialize(self):

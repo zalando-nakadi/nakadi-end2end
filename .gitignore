@@ -9,4 +9,5 @@ scm-source.json
 *.sh
 .cache/
 .eggs/
+.idea/
 end2end.egg-info/
